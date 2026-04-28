@@ -3,7 +3,7 @@ name: Build APK & Windows
 on:
   push:
     branches: [main]
-  workflow_dispatch:   # allows manual trigger from GitHub UI
+  workflow_dispatch:
 
 jobs:
   build-apk:
@@ -25,21 +25,19 @@ jobs:
           channel: stable
           cache: true
 
-      - name: Update backend URL in constants
-        run: |
-          sed -i "s|YOUR-APP-NAME.koyeb.app|invoicepos-production.up.railway.app|g" \
-            app/lib/core/constants/app_constants.dart || true
+      - name: List repo structure
+        run: ls -la && ls -la app/ || echo "no app dir"
 
       - name: Install dependencies
-        working-directory: app
         run: flutter pub get
+        working-directory: app
 
       - name: Accept Android licenses
-        run: yes | flutter doctor --android-licenses || true
+        run: yes | flutter doctor --android-licenses 2>/dev/null || true
 
-      - name: Build APK (split per ABI)
-        working-directory: app
+      - name: Build APK
         run: flutter build apk --release --split-per-abi
+        working-directory: app
 
       - name: Upload APKs
         uses: actions/upload-artifact@v4
@@ -65,12 +63,12 @@ jobs:
         run: flutter config --enable-windows-desktop
 
       - name: Install dependencies
-        working-directory: app
         run: flutter pub get
+        working-directory: app
 
       - name: Build Windows
-        working-directory: app
         run: flutter build windows --release
+        working-directory: app
 
       - name: Upload Windows build
         uses: actions/upload-artifact@v4

@@ -8,9 +8,12 @@ import 'router.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Hive.initFlutter();
-  await LocalDb.db;
-  await ApiClient.init(); // load persisted server URL before first request
+
+  // Each init is isolated — one failure must never blank the whole app
+  try { await Hive.initFlutter(); } catch (e) { debugPrint('Hive init error: $e'); }
+  try { await LocalDb.db;         } catch (e) { debugPrint('DB init error: $e'); }
+  try { await ApiClient.init();   } catch (e) { debugPrint('ApiClient init error: $e'); }
+
   runApp(const ProviderScope(child: InvoicePosApp()));
 }
 

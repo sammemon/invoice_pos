@@ -1,0 +1,5 @@
+package com.invoicepos.invoice_pos
+
+import io.flutter.embedding.android.FlutterActivity
+
+class MainActivity : FlutterActivity()

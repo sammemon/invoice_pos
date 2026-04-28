@@ -1,0 +1,83 @@
+name: invoice_pos
+description: Invoice & POS Billing Software for retail shops
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: ^3.11.5
+
+dependencies:
+  flutter:
+    sdk: flutter
+
+  # State management
+  flutter_riverpod: ^2.6.1
+
+  # Navigation
+  go_router: ^14.8.1
+
+  # Networking
+  dio: ^5.7.0
+  connectivity_plus: ^6.1.3
+
+  # Local database
+  sqflite: ^2.4.1
+  sqflite_common_ffi: ^2.3.4+4
+  path: ^1.9.0
+  path_provider: ^2.1.5
+
+  # Secure storage
+  flutter_secure_storage: ^9.2.4
+
+  # PDF generation
+  pdf: ^3.11.2
+  printing: ^5.14.2
+
+  # Barcode scanning
+  mobile_scanner: ^6.0.3
+
+  # Charts
+  fl_chart: ^0.70.2
+
+  # Date/time
+  intl: ^0.19.0
+
+  # UI helpers
+  shimmer: ^3.0.0
+  google_fonts: ^6.2.1
+  fluttertoast: ^8.2.12
+
+  # File handling & sharing
+  share_plus: ^10.1.4
+  open_filex: ^4.5.1
+
+  # CSV export
+  csv: ^6.0.0
+
+  # Network info for Wi-Fi export
+  network_info_plus: ^6.1.0
+  shelf: ^1.4.2
+  shelf_router: ^1.1.4
+
+  # Auto update
+  package_info_plus: ^8.2.1
+  http: ^1.2.2
+  url_launcher: ^6.3.1
+
+  # Hive for offline sync queue
+  hive: ^2.2.3
+  hive_flutter: ^1.1.0
+
+  # Icons
+  cupertino_icons: ^1.0.8
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/lottie/

@@ -1,0 +1,32 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell($path = \"d:\\\\software1\\\\invoice_pos_app\"; Get-ChildItem $path -Recurse | Where-Object { $_.PSIsContainer -eq $false } | Remove-Item -Force -ErrorAction SilentlyContinue; Get-ChildItem $path -Recurse -Directory | Sort-Object FullName -Descending | Remove-Item -Force -ErrorAction SilentlyContinue; Remove-Item $path -Force -ErrorAction SilentlyContinue; Get-ChildItem \"d:\\\\software1\\\\\")",
+      "PowerShell(cmd /c \"rd /s /q d:\\\\software1\\\\invoice_pos_app 2>&1\")",
+      "Bash(flutter --version)",
+      "Bash(npm --version)",
+      "Bash(git --version)",
+      "Bash(dart --version)",
+      "Bash(flutter doctor *)",
+      "Bash(mkdir -p \"d:/software1/backend/logs\")",
+      "Bash(npm install *)",
+      "Bash(flutter create *)",
+      "Bash(flutter pub *)",
+      "Bash(flutter analyze *)",
+      "Bash(node -e ' *)",
+      "Bash(node src/config/migrate.js)",
+      "Bash(node server.js)",
+      "Bash(curl -s http://localhost:5000/health)",
+      "Bash(node -e \"require\\('./src/middleware/auth'\\)\")",
+      "Bash(node test_api.js)",
+      "Bash(netstat -ano)",
+      "Bash(taskkill /PID 24216 /F)",
+      "Bash(pkg --version)",
+      "Bash(mkdir -p \"d:/software1/backend/dist\")",
+      "Bash(npm run *)",
+      "Bash(cp .env dist/.env)",
+      "Bash(./dist/invoice_pos_server.exe)",
+      "Bash(kill %1)"
+    ]
+  }
+}

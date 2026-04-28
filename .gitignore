@@ -1,0 +1,9 @@
+﻿app/build/
+app/.dart_tool/
+app/.flutter-plugins
+app/.flutter-plugins-dependencies
+backend/node_modules/
+backend/dist/
+backend/logs/
+dist/
+*.log
