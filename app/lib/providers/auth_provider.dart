@@ -25,7 +25,8 @@ class AuthNotifier extends StateNotifier<AuthState> {
   // GoRouter listens to this — increments on every auth state change
   final routerListenable = ValueNotifier<int>(0);
 
-  AuthNotifier() : super(const AuthState()) { _restoreSession(); }
+  // Start with isLoading:true so router waits before redirecting
+  AuthNotifier() : super(const AuthState(isLoading: true)) { _restoreSession(); }
 
   @override
   set state(AuthState value) {

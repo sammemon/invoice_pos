@@ -1,3 +1,4 @@
+import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import 'providers/auth_provider.dart';
@@ -27,17 +28,24 @@ final routerProvider = Provider<GoRouter>((ref) {
     // redirect every time routerListenable increments (on auth change)
     refreshListenable: authNotifier.routerListenable,
     redirect: (context, state) {
-      final loggedIn = ref.read(authProvider).isAuthenticated;
-      final onAuth = state.matchedLocation == '/login' ||
-                     state.matchedLocation == '/register';
+      final auth = ref.read(authProvider);
+      // Wait for session restore — show splash, don't redirect yet
+      if (auth.isLoading) return '/splash';
+      final loggedIn = auth.isAuthenticated;
+      final onAuth   = state.matchedLocation == '/login' ||
+                       state.matchedLocation == '/register';
+      if (state.matchedLocation == '/splash') {
+        return loggedIn ? '/dashboard' : '/login';
+      }
       if (!loggedIn && !onAuth) return '/login';
-      if (loggedIn && onAuth) return '/dashboard';
+      if (loggedIn && onAuth)   return '/dashboard';
       return null;
     },
     routes: [
+      GoRoute(path: '/splash',   builder: (_, _) => const _SplashScreen()),
       GoRoute(path: '/login',    builder: (_, _) => const LoginScreen()),
       GoRoute(path: '/register', builder: (_, _) => const RegisterScreen()),
-      GoRoute(path: '/',         redirect: (_, _) => '/dashboard'),
+      GoRoute(path: '/',         redirect: (_, _) => '/splash'),
       ShellRoute(
         builder: (context, state, child) => MainShell(child: child),
         routes: [
@@ -65,7 +73,25 @@ final routerProvider = Provider<GoRouter>((ref) {
     ],
   );
 
-  // Dispose router when provider is disposed
   ref.onDispose(router.dispose);
   return router;
 });
+
+// Shown while AuthNotifier restores the session from secure storage
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
+  @override
+  Widget build(BuildContext context) => const Scaffold(
+    backgroundColor: Color(0xFF1565C0),
+    body: Center(
+      child: Column(mainAxisSize: MainAxisSize.min, children: [
+        Icon(Icons.receipt_long_rounded, size: 72, color: Colors.white),
+        SizedBox(height: 24),
+        Text('Invoice & POS', style: TextStyle(color: Colors.white,
+            fontSize: 28, fontWeight: FontWeight.bold)),
+        SizedBox(height: 40),
+        CircularProgressIndicator(color: Colors.white54, strokeWidth: 2),
+      ]),
+    ),
+  );
+}
