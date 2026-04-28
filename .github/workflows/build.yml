@@ -1,0 +1,80 @@
+name: Build APK & Windows
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:   # allows manual trigger from GitHub UI
+
+jobs:
+  build-apk:
+    name: Build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Java
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+          cache: true
+
+      - name: Update backend URL in constants
+        run: |
+          sed -i "s|YOUR-APP-NAME.koyeb.app|invoicepos-production.up.railway.app|g" \
+            app/lib/core/constants/app_constants.dart || true
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Accept Android licenses
+        run: yes | flutter doctor --android-licenses || true
+
+      - name: Build APK (split per ABI)
+        working-directory: app
+        run: flutter build apk --release --split-per-abi
+
+      - name: Upload APKs
+        uses: actions/upload-artifact@v4
+        with:
+          name: android-apks
+          path: app/build/app/outputs/flutter-apk/*.apk
+          retention-days: 30
+
+  build-windows:
+    name: Build Windows EXE
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Set up Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: '3.41.7'
+          channel: stable
+          cache: true
+
+      - name: Enable Windows desktop
+        run: flutter config --enable-windows-desktop
+
+      - name: Install dependencies
+        working-directory: app
+        run: flutter pub get
+
+      - name: Build Windows
+        working-directory: app
+        run: flutter build windows --release
+
+      - name: Upload Windows build
+        uses: actions/upload-artifact@v4
+        with:
+          name: windows-build
+          path: app/build/windows/x64/runner/Release/
+          retention-days: 30
