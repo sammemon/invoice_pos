@@ -26,8 +26,10 @@ dependencies:
   path: ^1.9.0
   path_provider: ^2.1.5
 
-  # Secure storage
+  # Secure storage (Windows Credential Manager — used only for server URL pref)
   flutter_secure_storage: ^9.2.4
+  # Fast key-value storage for auth token (no Credential Manager, clears instantly)
+  shared_preferences: ^2.3.5
 
   # PDF generation
   pdf: ^3.11.2
