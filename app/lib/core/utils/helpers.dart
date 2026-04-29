@@ -5,6 +5,9 @@ class Helpers {
   static String formatCurrency(double amount) =>
       '${AppConstants.currency}${NumberFormat('#,##0.00').format(amount)}';
 
+  static String formatAmount(num amount) =>
+      NumberFormat('#,##0').format(amount);
+
   static String formatDate(DateTime date) =>
       DateFormat('dd MMM yyyy').format(date);
 

@@ -10,10 +10,10 @@ import 'screens/suppliers/suppliers_screen.dart';
 import 'screens/expenses/expenses_screen.dart';
 import 'screens/reports/reports_screen.dart';
 import 'screens/settings/settings_screen.dart';
+import 'screens/categories/categories_screen.dart';
+import 'screens/purchases/add_purchase_screen.dart';
 import 'widgets/common/main_shell.dart';
 
-/// Builds a fresh GoRouter for the authenticated shell.
-/// Called by _RouterShell in main.dart — no Riverpod, no auth redirects.
 GoRouter buildRouter() => GoRouter(
   initialLocation: '/dashboard',
   routes: [
@@ -35,10 +35,15 @@ GoRouter buildRouter() => GoRouter(
             GoRoute(path: ':id', builder: (ctx, s) =>
                 CustomerDetailScreen(customerId: s.pathParameters['id']!)),
           ]),
-        GoRoute(path: '/suppliers', builder: (_, _) => const SuppliersScreen()),
-        GoRoute(path: '/expenses',  builder: (_, _) => const ExpensesScreen()),
-        GoRoute(path: '/reports',   builder: (_, _) => const ReportsScreen()),
-        GoRoute(path: '/settings',  builder: (_, _) => const SettingsScreen()),
+        GoRoute(path: '/suppliers',  builder: (_, _) => const SuppliersScreen()),
+        GoRoute(path: '/expenses',   builder: (_, _) => const ExpensesScreen()),
+        GoRoute(path: '/reports',    builder: (_, _) => const ReportsScreen()),
+        GoRoute(path: '/settings',   builder: (_, _) => const SettingsScreen()),
+        GoRoute(path: '/categories', builder: (_, _) => const CategoriesScreen()),
+        GoRoute(path: '/purchases',  builder: (_, _) => const AddPurchaseScreen(),
+          routes: [
+            GoRoute(path: 'add', builder: (_, _) => const AddPurchaseScreen()),
+          ]),
       ],
     ),
   ],

@@ -1,305 +1,279 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
-import '../../providers/dashboard_provider.dart';
-import '../../providers/product_provider.dart';
 import '../../providers/auth_provider.dart';
+import '../../providers/dashboard_provider.dart';
+import '../../models/dashboard_model.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/utils/helpers.dart';
-import '../../models/dashboard_model.dart';
-import '../../services/update_service.dart';
 
-class DashboardScreen extends ConsumerStatefulWidget {
+class DashboardScreen extends ConsumerWidget {
   const DashboardScreen({super.key});
-  @override
-  ConsumerState<DashboardScreen> createState() => _DashboardScreenState();
-}
-
-class _DashboardScreenState extends ConsumerState<DashboardScreen> {
-  UpdateResult? _pendingUpdate;
 
   @override
-  void initState() {
-    super.initState();
-    // Check for update silently on every dashboard open
-    Future.microtask(_checkUpdate);
-  }
-
-  Future<void> _checkUpdate() async {
-    final update = await UpdateService.silentCheck();
-    if (update != null && mounted) {
-      setState(() => _pendingUpdate = update);
-    }
-  }
-
-  @override
-  Widget build(BuildContext context) {
-    final dashAsync = ref.watch(dashboardProvider);
-    final user = ref.watch(authProvider).user;
+  Widget build(BuildContext context, WidgetRef ref) {
+    final dashState = ref.watch(dashboardProvider);
 
     return Scaffold(
-      backgroundColor: AppTheme.surface,
-      // Update banner at top when new version available
-      bottomNavigationBar: _pendingUpdate != null
-          ? _UpdateBanner(
-              update: _pendingUpdate!,
-              onDismiss: () => setState(() => _pendingUpdate = null),
-            )
-          : null,
-      body: RefreshIndicator(
-        onRefresh: () async {
-          ref.read(dashboardProvider.notifier).fetch();
-          ref.read(productProvider.notifier).fetchFromServer();
-        },
-        child: CustomScrollView(slivers: [
-          SliverAppBar(
-            expandedHeight: 120,
-            pinned: true,
-            flexibleSpace: FlexibleSpaceBar(
-              background: Container(
-                decoration: const BoxDecoration(
-                  gradient: LinearGradient(colors: [AppTheme.primary, AppTheme.secondary],
-                      begin: Alignment.topLeft, end: Alignment.bottomRight)),
-                padding: const EdgeInsets.fromLTRB(20, 50, 20, 16),
-                child: Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-                  Column(crossAxisAlignment: CrossAxisAlignment.start, mainAxisAlignment: MainAxisAlignment.end, children: [
-                    Text('Welcome back,', style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 13)),
-                    Text(user?.name ?? 'User', style: const TextStyle(color: Colors.white, fontSize: 20, fontWeight: FontWeight.bold)),
-                    Text(user?.shopName ?? '', style: TextStyle(color: Colors.white.withAlpha(200), fontSize: 12)),
-                  ]),
-                  CircleAvatar(backgroundColor: Colors.white.withAlpha(50),
-                      child: Text((user?.name ?? 'U')[0].toUpperCase(),
-                          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold))),
-                ]),
-              ),
-            ),
-            actions: [
-              IconButton(icon: const Icon(Icons.refresh_rounded, color: Colors.white),
-                  onPressed: () => ref.read(dashboardProvider.notifier).fetch()),
-            ],
+      backgroundColor: Colors.grey.shade100,
+      appBar: AppBar(
+        backgroundColor: AppTheme.primary,
+        foregroundColor: Colors.white,
+        title: const Text('You\'re a Premium Member',
+            style: TextStyle(fontSize: 16, fontWeight: FontWeight.w600)),
+        actions: [
+          Container(
+            margin: const EdgeInsets.only(right: 12),
+            padding: const EdgeInsets.all(6),
+            decoration: BoxDecoration(
+                color: Colors.amber, borderRadius: BorderRadius.circular(20)),
+            child: const Icon(Icons.workspace_premium_rounded,
+                color: Colors.white, size: 22),
           ),
-          SliverPadding(
-            padding: const EdgeInsets.all(16),
-            sliver: dashAsync.when(
-              loading: () => const SliverFillRemaining(child: Center(child: CircularProgressIndicator())),
-              error: (e, _) => SliverFillRemaining(
-                child: Center(child: Column(mainAxisAlignment: MainAxisAlignment.center, children: [
-                  const Icon(Icons.wifi_off_rounded, size: 56, color: Colors.grey),
-                  const SizedBox(height: 12),
-                  const Text('Could not load data', style: TextStyle(color: Colors.grey)),
-                  const SizedBox(height: 8),
-                  ElevatedButton(onPressed: () => ref.read(dashboardProvider.notifier).fetch(),
-                      child: const Text('Retry')),
-                ]))),
-              data: (d) => _DashboardContent(data: d),
-            ),
-          ),
-        ]),
+        ],
       ),
-      floatingActionButton: FloatingActionButton.extended(
-        onPressed: () => context.go('/pos'),
-        icon: const Icon(Icons.point_of_sale_rounded),
-        label: const Text('New Sale'),
+      drawer: const AppDrawer(),
+      body: RefreshIndicator(
+        onRefresh: () async =>
+            ref.read(dashboardProvider.notifier).fetch(),
+        child: dashState.when(
+          loading: () => const Center(child: CircularProgressIndicator()),
+          error: (e, _) => Center(child: Text('Error: $e')),
+          data: (model) => _DashboardBody(model: model),
+        ),
       ),
     );
   }
 }
 
-class _DashboardContent extends ConsumerWidget {
-  final DashboardModel data;
-  const _DashboardContent({required this.data});
+class _DashboardBody extends StatelessWidget {
+  final DashboardModel model;
+  const _DashboardBody({required this.model});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
-    final lowStock = ref.watch(productProvider).lowStock;
-
-    return SliverList(delegate: SliverChildListDelegate([
-      // Today
-      Text('Today', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-      const SizedBox(height: 8),
+  Widget build(BuildContext context) {
+    return ListView(padding: const EdgeInsets.all(12), children: [
+      // ── Period cards ───────────────────────────────────────
       Row(children: [
-        Expanded(child: _StatCard(label: 'Sales', value: Helpers.formatCurrency(data.todaySales),
-            sub: '${data.todaySalesCount} orders', icon: Icons.shopping_cart_rounded, color: AppTheme.primary)),
-        const SizedBox(width: 12),
-        Expanded(child: _StatCard(label: 'Profit', value: Helpers.formatCurrency(data.todayProfit),
-            sub: 'Net today', icon: Icons.trending_up_rounded, color: AppTheme.success)),
+        Expanded(child: _PeriodCard(label: 'Yesterday',
+            sales: 0, profit: 0)),
+        const SizedBox(width: 8),
+        Expanded(child: _PeriodCard(label: 'Last 7 Days',
+            sales: model.monthSales, profit: model.monthProfit)),
+        const SizedBox(width: 8),
+        Expanded(child: _PeriodCard(label: 'This Month',
+            sales: model.monthSales, profit: model.monthProfit)),
+      ]),
+      const SizedBox(height: 8),
+
+      // ── Today card ─────────────────────────────────────────
+      Card(child: Padding(padding: const EdgeInsets.all(16),
+        child: Row(children: [
+          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              const Text('Today so far',
+                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+              const SizedBox(height: 4),
+              Text('Total Sales   Total Profit',
+                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
+              Row(children: [
+                Text('PKR ${Helpers.formatAmount(model.todaySales)}',
+                    style: const TextStyle(fontWeight: FontWeight.bold)),
+                const SizedBox(width: 24),
+                Text('PKR ${Helpers.formatAmount(model.todayProfit)}',
+                    style: const TextStyle(
+                        fontWeight: FontWeight.bold, color: Colors.green)),
+              ]),
+            ],
+          )),
+          Builder(builder: (ctx) => ElevatedButton.icon(
+            onPressed: () => ctx.go('/pos'),
+            icon: const Icon(Icons.add_circle_outline, size: 18),
+            label: const Text('Add New Sale'),
+          )),
+        ]),
+      )),
+      const SizedBox(height: 8),
+
+      // ── Stock value cards ──────────────────────────────────
+      Row(children: [
+        Expanded(child: _StockValueCard(label: 'Total Stock\nValue (No Profit)',
+            value: 0, color: const Color(0xFF1A2A4A))),
+        const SizedBox(width: 8),
+        Expanded(child: _StockValueCard(label: 'Total Stock\nValue (With Profit)',
+            value: 0, color: const Color(0xFF6A0DAD))),
+        const SizedBox(width: 8),
+        Expanded(child: _StockValueCard(label: 'Total Stock\nValue (WholeSale)',
+            value: 0, color: Colors.grey.shade700)),
+      ]),
+      const SizedBox(height: 8),
+
+      // ── Count cards ────────────────────────────────────────
+      Row(children: [
+        Expanded(child: _CountCard(label: 'Total Stock\nProducts',
+            value: 0, color: Colors.blue.shade700)),
+        const SizedBox(width: 8),
+        Expanded(child: _CountCard(label: 'In Stock\nProducts',
+            value: 0, color: Colors.green)),
+        const SizedBox(width: 8),
+        Expanded(child: _CountCard(label: 'Out of Stock\nProducts',
+            value: 0, color: Colors.red)),
+      ]),
+      const SizedBox(height: 8),
+
+      Row(children: [
+        Expanded(child: _CountCard(label: 'Low In Stock\nProducts',
+            value: model.lowStockCount, color: Colors.orange)),
+        const SizedBox(width: 8),
+        Expanded(child: _CountCard(label: 'Expire Stock\nProducts',
+            value: 0, color: Colors.black87)),
+        const SizedBox(width: 8),
+        Expanded(child: _CountCard(label: 'Pending\nPayments',
+            value: model.pendingCustomers, color: Colors.purple)),
       ]),
       const SizedBox(height: 16),
-
-      // Month
-      Text('This Month', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-      const SizedBox(height: 8),
-      Row(children: [
-        Expanded(child: _StatCard(label: 'Revenue', value: Helpers.formatCurrency(data.monthSales),
-            sub: '${data.monthSalesCount} orders', icon: Icons.account_balance_wallet_rounded, color: AppTheme.secondary)),
-        const SizedBox(width: 12),
-        Expanded(child: _StatCard(label: 'Profit', value: Helpers.formatCurrency(data.monthProfit),
-            sub: 'Net month', icon: Icons.bar_chart_rounded, color: AppTheme.accent)),
-      ]),
-      const SizedBox(height: 16),
-
-      // Alerts
-      Row(children: [
-        Expanded(child: _AlertCard(label: 'Low Stock', value: data.lowStockCount.toString(),
-            sub: 'items to reorder', icon: Icons.warning_rounded, color: AppTheme.warning,
-            onTap: () => GoRouter.of(context).go('/products'))),
-        const SizedBox(width: 12),
-        Expanded(child: _AlertCard(label: 'Pending', value: Helpers.formatCurrency(data.pendingAmount),
-            sub: '${data.pendingCustomers} customers', icon: Icons.pending_actions_rounded, color: AppTheme.error,
-            onTap: () => GoRouter.of(context).go('/customers'))),
-      ]),
-
-      if (lowStock.isNotEmpty) ...[
-        const SizedBox(height: 20),
-        Text('Low Stock Items', style: Theme.of(context).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w600)),
-        const SizedBox(height: 8),
-        ...lowStock.take(5).map((p) => Card(
-          margin: const EdgeInsets.only(bottom: 8),
-          child: ListTile(
-            leading: CircleAvatar(backgroundColor: AppTheme.warning.withAlpha(30),
-                child: const Icon(Icons.inventory_2_outlined, color: AppTheme.warning, size: 20)),
-            title: Text(p.name, style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w500)),
-            subtitle: Text(p.category),
-            trailing: Container(padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
-              decoration: BoxDecoration(color: p.quantity == 0 ? AppTheme.error : AppTheme.warning,
-                  borderRadius: BorderRadius.circular(20)),
-              child: Text('${p.quantity} ${p.unit}',
-                  style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.w600))),
-          ),
-        )),
-      ],
-
-      const SizedBox(height: 80),
-    ]));
+    ]);
   }
 }
 
-class _StatCard extends StatelessWidget {
-  final String label, value, sub;
-  final IconData icon;
-  final Color color;
-  const _StatCard({required this.label, required this.value, required this.sub,
-      required this.icon, required this.color});
+// ── Reusable small widgets ────────────────────────────────
+
+class _PeriodCard extends StatelessWidget {
+  final String label;
+  final double sales, profit;
+  const _PeriodCard({required this.label, required this.sales, required this.profit});
 
   @override
   Widget build(BuildContext context) => Card(
-    child: Padding(
-      padding: const EdgeInsets.all(16),
+    child: Padding(padding: const EdgeInsets.all(10),
       child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-        Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-          Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-          Icon(icon, color: color, size: 20),
-        ]),
-        const SizedBox(height: 8),
-        Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-        const SizedBox(height: 2),
-        Text(sub, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
+        Text(label, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        const SizedBox(height: 4),
+        const Text('Total Sales', style: TextStyle(fontSize: 10, color: Colors.grey)),
+        Text('PKR ${Helpers.formatAmount(sales)}',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
+        const Text('Total Profit', style: TextStyle(fontSize: 10, color: Colors.grey)),
+        Text('PKR ${Helpers.formatAmount(profit)}',
+            style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 12, color: Colors.green)),
       ]),
     ),
   );
 }
 
-// ── Update banner shown at bottom of dashboard ────────────────────
-class _UpdateBanner extends StatefulWidget {
-  final UpdateResult update;
-  final VoidCallback onDismiss;
-  const _UpdateBanner({required this.update, required this.onDismiss});
+class _StockValueCard extends StatelessWidget {
+  final String label;
+  final double value;
+  final Color color;
+  const _StockValueCard({required this.label, required this.value, required this.color});
+
   @override
-  State<_UpdateBanner> createState() => _UpdateBannerState();
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+    child: Column(children: [
+      Text(label, style: const TextStyle(color: Colors.white, fontSize: 10),
+          textAlign: TextAlign.center),
+      const SizedBox(height: 4),
+      const Text('PKR', style: TextStyle(color: Colors.white70, fontSize: 10)),
+      Text(Helpers.formatAmount(value),
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+    ]),
+  );
 }
 
-class _UpdateBannerState extends State<_UpdateBanner> {
-  bool _downloading = false;
-  double _progress  = 0;
+class _CountCard extends StatelessWidget {
+  final String label;
+  final int value;
+  final Color color;
+  const _CountCard({required this.label, required this.value, required this.color});
 
   @override
-  Widget build(BuildContext context) {
-    return Container(
-      color: AppTheme.primary,
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      child: SafeArea(
-        top: false,
-        child: _downloading
-            ? Column(mainAxisSize: MainAxisSize.min, children: [
-                Text('Downloading update v${widget.update.latestVersion}...',
-                    style: const TextStyle(color: Colors.white, fontSize: 12)),
-                const SizedBox(height: 6),
-                LinearProgressIndicator(
-                  value: _progress > 0 ? _progress : null,
-                  backgroundColor: Colors.white24,
-                  valueColor: const AlwaysStoppedAnimation(Colors.white),
-                ),
-                const SizedBox(height: 4),
-                Text('${(_progress * 100).toStringAsFixed(0)}%  — App will restart automatically',
-                    style: const TextStyle(color: Colors.white70, fontSize: 11)),
-              ])
-            : Row(children: [
-                const Icon(Icons.system_update_rounded, color: Colors.white, size: 20),
-                const SizedBox(width: 10),
-                Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-                    mainAxisSize: MainAxisSize.min, children: [
-                  Text('Update v${widget.update.latestVersion} available',
-                      style: const TextStyle(color: Colors.white,
-                          fontWeight: FontWeight.bold, fontSize: 13)),
-                  if (widget.update.releaseNotes.isNotEmpty)
-                    Text(widget.update.releaseNotes,
-                        style: const TextStyle(color: Colors.white70, fontSize: 11),
-                        maxLines: 1, overflow: TextOverflow.ellipsis),
-                ])),
-                TextButton(
-                  onPressed: widget.onDismiss,
-                  child: const Text('Later', style: TextStyle(color: Colors.white70)),
-                ),
-                ElevatedButton(
-                  style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white,
-                      foregroundColor: AppTheme.primary,
-                      padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 8)),
-                  onPressed: () async {
-                    setState(() { _downloading = true; _progress = 0; });
-                    await UpdateService.downloadAndInstall(
-                      widget.update.downloadUrl,
-                      onProgress: (received, total) {
-                        if (total > 0 && mounted) {
-                          setState(() => _progress = received / total);
-                        }
-                      },
-                    );
-                  },
-                  child: const Text('Update Now', style: TextStyle(fontWeight: FontWeight.bold)),
-                ),
-              ]),
-      ),
+  Widget build(BuildContext context) => Container(
+    padding: const EdgeInsets.all(10),
+    decoration: BoxDecoration(color: color, borderRadius: BorderRadius.circular(12)),
+    child: Column(children: [
+      Text(label, style: const TextStyle(color: Colors.white, fontSize: 10),
+          textAlign: TextAlign.center),
+      const SizedBox(height: 4),
+      Text('$value',
+          style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 22)),
+    ]),
+  );
+}
+
+// ── Global App Drawer ─────────────────────────────────────
+
+class AppDrawer extends ConsumerWidget {
+  const AppDrawer({super.key});
+
+  @override
+  Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+    return Drawer(
+      child: Column(children: [
+        Container(
+          width: double.infinity,
+          padding: const EdgeInsets.fromLTRB(16, 48, 16, 20),
+          decoration: const BoxDecoration(
+              gradient: LinearGradient(
+                  colors: [AppTheme.primary, Color(0xFF1565C0)])),
+          child: Column(children: [
+            Stack(children: [
+              const CircleAvatar(radius: 40, backgroundColor: Colors.white24,
+                  child: Icon(Icons.person_rounded, size: 48, color: Colors.white)),
+              Positioned(bottom: 0, right: 0,
+                  child: Container(padding: const EdgeInsets.all(4),
+                    decoration: const BoxDecoration(color: Colors.amber, shape: BoxShape.circle),
+                    child: const Icon(Icons.workspace_premium_rounded, size: 16, color: Colors.white))),
+            ]),
+            const SizedBox(height: 10),
+            const Text('Welcome', style: TextStyle(color: Colors.white70, fontSize: 13)),
+            Text(user?.name ?? 'User',
+                style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 16)),
+            Text(user?.email ?? '',
+                style: const TextStyle(color: Colors.white70, fontSize: 12)),
+          ]),
+        ),
+        Expanded(child: ListView(padding: EdgeInsets.zero, children: [
+          _DTile(Icons.point_of_sale_rounded, 'Switch to POS',
+              () { Navigator.pop(context); context.go('/pos'); }),
+          _DTile(Icons.bar_chart_rounded, 'Profit Loss',
+              () { Navigator.pop(context); context.go('/reports'); }),
+          _DTile(Icons.inventory_2_rounded, 'Stock Management',
+              () { Navigator.pop(context); context.go('/products'); }),
+          _DTile(Icons.attach_money_rounded, 'Expense Management',
+              () { Navigator.pop(context); context.go('/expenses'); }),
+          _DTile(Icons.category_rounded, 'Product Categories',
+              () { Navigator.pop(context); context.go('/categories'); }),
+          _DTile(Icons.people_rounded, 'Customers',
+              () { Navigator.pop(context); context.go('/customers'); }),
+          _DTile(Icons.local_shipping_rounded, 'Suppliers',
+              () { Navigator.pop(context); context.go('/suppliers'); }),
+          _DTile(Icons.shopping_cart_rounded, 'Add Purchasing',
+              () { Navigator.pop(context); context.go('/purchases/add'); }),
+          const Divider(),
+          _DTile(Icons.logout_rounded, 'Logout',
+              () async {
+                Navigator.pop(context);
+                await ref.read(authProvider.notifier).logout();
+              }, color: Colors.red),
+        ])),
+      ]),
     );
   }
 }
 
-class _AlertCard extends StatelessWidget {
-  final String label, value, sub;
+class _DTile extends StatelessWidget {
   final IconData icon;
-  final Color color;
+  final String label;
   final VoidCallback onTap;
-  const _AlertCard({required this.label, required this.value, required this.sub,
-      required this.icon, required this.color, required this.onTap});
+  final Color? color;
+  const _DTile(this.icon, this.label, this.onTap, {this.color});
 
   @override
-  Widget build(BuildContext context) => Card(
-    child: InkWell(
-      onTap: onTap,
-      borderRadius: BorderRadius.circular(12),
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
-          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
-            Text(label, style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-            Icon(icon, color: color, size: 20),
-          ]),
-          const SizedBox(height: 8),
-          Text(value, style: TextStyle(fontSize: 20, fontWeight: FontWeight.bold, color: color)),
-          const SizedBox(height: 2),
-          Text(sub, style: TextStyle(color: Colors.grey.shade500, fontSize: 11)),
-        ]),
-      ),
-    ),
+  Widget build(BuildContext context) => ListTile(
+    leading: Icon(icon, color: color ?? AppTheme.primary),
+    title: Text(label, style: TextStyle(color: color, fontWeight: FontWeight.w500)),
+    onTap: onTap,
   );
 }

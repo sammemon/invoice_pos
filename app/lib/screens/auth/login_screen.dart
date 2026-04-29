@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import '../../providers/auth_provider.dart';
 import '../../core/theme/app_theme.dart';
 
@@ -23,8 +22,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
 
   Future<void> _login() async {
     if (!_formKey.currentState!.validate()) return;
-    final ok = await ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _passCtrl.text);
-    if (ok && mounted) context.go('/dashboard');
+    // Auth gate in main.dart handles navigation to dashboard on success
+    await ref.read(authProvider.notifier).login(_emailCtrl.text.trim(), _passCtrl.text);
   }
 
   @override
@@ -95,7 +94,8 @@ class _LoginScreenState extends ConsumerState<LoginScreen> {
                   )),
                   const SizedBox(height: 16),
                   TextButton(
-                    onPressed: () => context.go('/register'),
+                    // Use local Navigator (we're inside _LoginFlow's plain Navigator, not GoRouter)
+                    onPressed: () => Navigator.of(context).pushNamed('/register'),
                     child: const Text("Don't have an account? Register"),
                   ),
                 ]),
