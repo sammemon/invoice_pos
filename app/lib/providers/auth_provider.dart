@@ -24,6 +24,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   // GoRouter listens to this — increments on every auth state change
   final routerListenable = ValueNotifier<int>(0);
+  bool _suppressNotify = false;
 
   // Start with isLoading:true so router waits before redirecting
   AuthNotifier() : super(const AuthState(isLoading: true)) { _restoreSession(); }
@@ -31,7 +32,7 @@ class AuthNotifier extends StateNotifier<AuthState> {
   @override
   set state(AuthState value) {
     super.state = value;
-    routerListenable.value++;
+    if (!_suppressNotify) routerListenable.value++;
   }
 
   Future<void> _restoreSession() async {
@@ -112,8 +113,14 @@ class AuthNotifier extends StateNotifier<AuthState> {
   }
 
   Future<void> logout() async {
-    await _storage.deleteAll();
+    // Set state FIRST (instant) — never await storage before clearing state.
+    // flutter_secure_storage.deleteAll() can hang on Windows Credential Manager,
+    // which keeps the dialog open and blocks context.go('/login').
+    _suppressNotify = true;
     state = const AuthState();
+    _suppressNotify = false;
+    // Clear storage in background — don't await
+    _storage.deleteAll().catchError((_) {});
   }
 
   String _extractError(Object e) {

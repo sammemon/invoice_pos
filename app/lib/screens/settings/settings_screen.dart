@@ -361,9 +361,10 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      // refreshListenable in the router handles navigation to /login automatically.
-      // Do NOT call context.go here — double navigation causes the black screen.
       await ref.read(authProvider.notifier).logout();
+      // refreshListenable is suppressed during logout to prevent ShellRoute conflict.
+      // Navigate explicitly here — this is the only navigation that fires.
+      if (context.mounted) context.go('/login');
     }
   }
 }
