@@ -68,29 +68,35 @@ class _DashboardBody extends StatelessWidget {
 
       // ── Today card ─────────────────────────────────────────
       Card(child: Padding(padding: const EdgeInsets.all(16),
-        child: Row(children: [
-          Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Text('Today so far',
-                  style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
-              const SizedBox(height: 4),
-              Text('Total Sales   Total Profit',
-                  style: TextStyle(color: Colors.grey.shade600, fontSize: 12)),
-              Row(children: [
-                Text('PKR ${Helpers.formatAmount(model.todaySales)}',
-                    style: const TextStyle(fontWeight: FontWeight.bold)),
-                const SizedBox(width: 24),
-                Text('PKR ${Helpers.formatAmount(model.todayProfit)}',
-                    style: const TextStyle(
-                        fontWeight: FontWeight.bold, color: Colors.green)),
-              ]),
-            ],
-          )),
-          Builder(builder: (ctx) => ElevatedButton.icon(
-            onPressed: () => ctx.go('/pos'),
-            icon: const Icon(Icons.add_circle_outline, size: 18),
-            label: const Text('Add New Sale'),
-          )),
+        child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Row(mainAxisAlignment: MainAxisAlignment.spaceBetween, children: [
+            const Text('Today so far',
+                style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16)),
+            Builder(builder: (ctx) => ElevatedButton.icon(
+              onPressed: () => ctx.go('/pos'),
+              icon: const Icon(Icons.add_circle_outline, size: 16),
+              label: const Text('Add New Sale', style: TextStyle(fontSize: 12)),
+              style: ElevatedButton.styleFrom(padding:
+                  const EdgeInsets.symmetric(horizontal: 12, vertical: 8)),
+            )),
+          ]),
+          const SizedBox(height: 8),
+          Row(children: [
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Total Sales',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('PKR ${Helpers.formatAmount(model.todaySales)}',
+                  style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+            ]),
+            const SizedBox(width: 40),
+            Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              const Text('Total Profit',
+                  style: TextStyle(fontSize: 12, color: Colors.grey)),
+              Text('PKR ${Helpers.formatAmount(model.todayProfit)}',
+                  style: const TextStyle(
+                      fontWeight: FontWeight.bold, fontSize: 15, color: Colors.green)),
+            ]),
+          ]),
         ]),
       )),
       const SizedBox(height: 8),

@@ -41,10 +41,6 @@ class MainShell extends ConsumerWidget {
                 ),
                 destinations: _tabs.map((t) => NavigationRailDestination(
                     icon: Icon(t.icon), label: Text(t.label))).toList(),
-                trailing: IconButton(
-                  icon: const Icon(Icons.settings_rounded),
-                  onPressed: () => context.go('/settings'),
-                ),
               ),
               const VerticalDivider(thickness: 1, width: 1),
               Expanded(child: child),
