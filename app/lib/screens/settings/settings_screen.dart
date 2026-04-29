@@ -344,15 +344,22 @@ class SettingsScreen extends ConsumerWidget {
 
   // ── Logout ───────────────────────────────────────────────
   void _logout(BuildContext context, WidgetRef ref) async {
+    // useRootNavigator:true shows dialog on the MaterialApp's root navigator,
+    // NOT on the ShellRoute's sub-navigator. This way the dialog stays
+    // interactive even when the ShellRoute is torn down during logout.
     final ok = await showDialog<bool>(
       context: context,
-      builder: (_) => AlertDialog(
+      useRootNavigator: true,
+      builder: (ctx) => AlertDialog(
         title: const Text('Logout?'),
         content: const Text('You will be signed out.'),
         actions: [
-          TextButton(onPressed: () => Navigator.pop(context, false), child: const Text('Cancel')),
+          TextButton(
+            onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(false),
+            child: const Text('Cancel'),
+          ),
           ElevatedButton(
-            onPressed: () => Navigator.pop(context, true),
+            onPressed: () => Navigator.of(ctx, rootNavigator: true).pop(true),
             style: ElevatedButton.styleFrom(backgroundColor: AppTheme.error),
             child: const Text('Logout', style: TextStyle(color: Colors.white)),
           ),
@@ -360,9 +367,6 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
-      // Auth gate in main.dart watches authProvider.
-      // Clearing state here automatically swaps the entire UI to LoginScreen.
-      // No context.go needed — that was the cause of the black screen.
       await ref.read(authProvider.notifier).logout();
     }
   }
