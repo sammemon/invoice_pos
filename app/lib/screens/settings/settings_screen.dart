@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:go_router/go_router.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/sync_provider.dart';
@@ -361,10 +360,10 @@ class SettingsScreen extends ConsumerWidget {
       ),
     );
     if (ok == true) {
+      // Auth gate in main.dart watches authProvider.
+      // Clearing state here automatically swaps the entire UI to LoginScreen.
+      // No context.go needed — that was the cause of the black screen.
       await ref.read(authProvider.notifier).logout();
-      // refreshListenable is suppressed during logout to prevent ShellRoute conflict.
-      // Navigate explicitly here — this is the only navigation that fires.
-      if (context.mounted) context.go('/login');
     }
   }
 }

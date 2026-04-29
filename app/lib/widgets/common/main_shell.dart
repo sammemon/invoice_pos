@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:go_router/go_router.dart';
 import '../../providers/sync_provider.dart';
+import 'update_dialog.dart';
 
 class MainShell extends ConsumerWidget {
   final Widget child;
@@ -23,50 +24,52 @@ class MainShell extends ConsumerWidget {
 
     final selectedIndex = _tabs.indexWhere((t) => location.startsWith(t.path));
 
-    if (isWide) {
-      return Scaffold(
-        body: Row(children: [
-          NavigationRail(
-            extended: MediaQuery.of(context).size.width >= 960,
-            selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-            onDestinationSelected: (i) => context.go(_tabs[i].path),
-            leading: Padding(
-              padding: const EdgeInsets.symmetric(vertical: 12),
-              child: Column(children: [
-                const Icon(Icons.receipt_long_rounded, size: 32, color: Color(0xFF1565C0)),
-                const SizedBox(height: 4),
+    final scaffold = isWide
+        ? Scaffold(
+            body: Row(children: [
+              NavigationRail(
+                extended: MediaQuery.of(context).size.width >= 960,
+                selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+                onDestinationSelected: (i) => context.go(_tabs[i].path),
+                leading: Padding(
+                  padding: const EdgeInsets.symmetric(vertical: 12),
+                  child: Column(children: [
+                    const Icon(Icons.receipt_long_rounded, size: 32, color: Color(0xFF1565C0)),
+                    const SizedBox(height: 4),
+                    _SyncIndicator(sync: sync),
+                  ]),
+                ),
+                destinations: _tabs.map((t) => NavigationRailDestination(
+                    icon: Icon(t.icon), label: Text(t.label))).toList(),
+                trailing: IconButton(
+                  icon: const Icon(Icons.settings_rounded),
+                  onPressed: () => context.go('/settings'),
+                ),
+              ),
+              const VerticalDivider(thickness: 1, width: 1),
+              Expanded(child: child),
+            ]),
+          )
+        : Scaffold(
+            appBar: AppBar(
+              title: const Text('Invoice & POS'),
+              actions: [
                 _SyncIndicator(sync: sync),
-              ]),
+                IconButton(icon: const Icon(Icons.settings_rounded), onPressed: () => context.go('/settings')),
+              ],
             ),
-            destinations: _tabs.map((t) => NavigationRailDestination(
-              icon: Icon(t.icon), label: Text(t.label))).toList(),
-            trailing: IconButton(
-              icon: const Icon(Icons.settings_rounded),
-              onPressed: () => context.go('/settings'),
+            body: child,
+            bottomNavigationBar: NavigationBar(
+              selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
+              onDestinationSelected: (i) => context.go(_tabs[i].path),
+              destinations: _tabs.map((t) => NavigationDestination(
+                  icon: Icon(t.icon), label: t.label)).toList(),
             ),
-          ),
-          const VerticalDivider(thickness: 1, width: 1),
-          Expanded(child: child),
-        ]),
-      );
-    }
+          );
 
-    return Scaffold(
-      appBar: AppBar(
-        title: const Text('Invoice & POS'),
-        actions: [
-          _SyncIndicator(sync: sync),
-          IconButton(icon: const Icon(Icons.settings_rounded), onPressed: () => context.go('/settings')),
-        ],
-      ),
-      body: child,
-      bottomNavigationBar: NavigationBar(
-        selectedIndex: selectedIndex < 0 ? 0 : selectedIndex,
-        onDestinationSelected: (i) => context.go(_tabs[i].path),
-        destinations: _tabs.map((t) => NavigationDestination(
-          icon: Icon(t.icon), label: t.label)).toList(),
-      ),
-    );
+    // UpdateChecker silently checks for a new version 3s after login.
+    // When found it shows the download dialog automatically.
+    return UpdateChecker(child: scaffold);
   }
 }
 
