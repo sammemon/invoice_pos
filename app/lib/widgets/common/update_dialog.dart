@@ -79,7 +79,7 @@ class _UpdateDialog extends ConsumerWidget {
             const SizedBox(height: 16),
             ClipRRect(borderRadius: BorderRadius.circular(4),
               child: LinearProgressIndicator(
-                value: state.progress,
+                value: state.progress > 0 ? state.progress : null,
                 minHeight: 8,
                 backgroundColor: Colors.grey.shade200,
                 valueColor: const AlwaysStoppedAnimation(AppTheme.primary),
@@ -88,8 +88,12 @@ class _UpdateDialog extends ConsumerWidget {
             Text(
               state.progress > 0
                   ? 'Downloading... ${(state.progress * 100).toStringAsFixed(0)}%'
-                  : 'Starting download...',
+                  : 'Downloading (~25 MB) — please wait 1-2 minutes...',
               style: const TextStyle(fontSize: 12, color: Colors.grey)),
+            const SizedBox(height: 4),
+            const Text(
+              'A UAC prompt will appear when the installer is ready.',
+              style: TextStyle(fontSize: 11, color: Colors.orange)),
           ],
         ]),
         actions: [
@@ -104,8 +108,21 @@ class _UpdateDialog extends ConsumerWidget {
             ),
           if (!state.downloading)
             ElevatedButton.icon(
-              onPressed: () =>
-                  ref.read(updateProvider.notifier).downloadAndInstall(),
+              onPressed: () async {
+                try {
+                  await ref.read(updateProvider.notifier).downloadAndInstall();
+                } catch (e) {
+                  if (context.mounted) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(
+                        content: Text('Download failed: $e'),
+                        backgroundColor: Colors.red,
+                        duration: const Duration(seconds: 6),
+                      ),
+                    );
+                  }
+                }
+              },
               icon: const Icon(Icons.download_rounded, size: 18),
               label: const Text('Download & Install'),
               style: ElevatedButton.styleFrom(

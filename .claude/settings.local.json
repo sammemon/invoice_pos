@@ -27,7 +27,8 @@
       "Bash(cp .env dist/.env)",
       "Bash(./dist/invoice_pos_server.exe)",
       "Bash(kill %1)",
-      "PowerShell(Invoke-RestMethod \"https://invoicepos-production.up.railway.app/api/version/check?platform=windows&currentVersion=1.0.0\")"
+      "PowerShell(Invoke-RestMethod \"https://invoicepos-production.up.railway.app/api/version/check?platform=windows&currentVersion=1.0.0\")",
+      "PowerShell(Invoke-RestMethod \"https://invoicepos-production.up.railway.app/api/version/check?platform=windows&currentVersion=1.0.2\")"
     ]
   }
 }

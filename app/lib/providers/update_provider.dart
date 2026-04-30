@@ -1,3 +1,4 @@
+import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../services/update_service.dart';
 
@@ -46,10 +47,16 @@ class UpdateNotifier extends StateNotifier<UpdateState> {
     final url = state.available?.downloadUrl;
     if (url == null) return;
     state = state.copyWith(downloading: true, progress: 0);
-    await UpdateService.downloadAndInstall(url, onProgress: (received, total) {
-      if (total > 0) state = state.copyWith(progress: received / total);
-    });
-    state = state.copyWith(downloading: false);
+    try {
+      await UpdateService.downloadAndInstall(url, onProgress: (received, total) {
+        if (total > 0) state = state.copyWith(progress: received / total);
+      });
+    } catch (e) {
+      // Reset so the dialog shows the error and the button is clickable again
+      state = state.copyWith(downloading: false);
+      debugPrint('Update failed: $e');
+      rethrow;
+    }
   }
 
   void dismiss() => state = state.copyWith(dismissed: true);

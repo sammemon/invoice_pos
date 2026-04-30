@@ -96,17 +96,12 @@ Name: "{group}\Uninstall {#AppName}";               Filename: "{uninstallexe}"
 
 ; Desktop shortcut
 Name: "{autodesktop}\{#AppName}";                   Filename: "{app}\{#AppExeName}"; WorkingDir: "{app}"; Tasks: desktopicon
+; Startup folder — auto-starts backend on login (no schtasks admin needed)
+Name: "{userstartup}\InvoicePOS Backend";            Filename: "{app}\server\{#ServerExe}"; WorkingDir: "{app}\server"; Tasks: autostart
 
 ; ── [Run] — post-install ─────────────────────────────────────────
 [Run]
-; Register backend server as a scheduled task (SYSTEM account, runs on boot, hidden)
-Filename: "schtasks.exe"; \
-  Parameters: "/Create /F /SC ONSTART /TN ""{#TaskName}"" /TR """"""{app}\server\{#ServerExe}"""" /RU SYSTEM /RL HIGHEST /DELAY 0000:20"; \
-  Flags: runhidden waituntilterminated; \
-  Tasks: autostart; \
-  StatusMsg: "Registering backend service..."
-
-; Start the backend right now (hidden, no window)
+; Start the backend right now (hidden)
 Filename: "powershell.exe"; \
   Parameters: "-WindowStyle Hidden -Command ""Start-Process '{app}\server\{#ServerExe}' -WindowStyle Hidden"""; \
   Flags: runhidden waituntilterminated; \
@@ -120,8 +115,7 @@ Filename: "{app}\{#AppExeName}"; \
 
 ; ── [UninstallRun] — pre-uninstall ───────────────────────────────
 [UninstallRun]
-Filename: "schtasks.exe"; Parameters: "/Delete /F /TN ""{#TaskName}"""; Flags: runhidden; RunOnceId: "RemoveTask"
-Filename: "taskkill.exe"; Parameters: "/F /IM ""{#ServerExe}""";         Flags: runhidden; RunOnceId: "KillServer"
+Filename: "taskkill.exe"; Parameters: "/F /IM ""{#ServerExe}"""; Flags: runhidden; RunOnceId: "KillServer"
 
 ; ── [UninstallDelete] ────────────────────────────────────────────
 [UninstallDelete]

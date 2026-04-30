@@ -38,54 +38,55 @@ class UpdateService {
     }
   }
 
-  // ── Windows: download via HttpClient (handles GitHub CDN redirects)
+  // ── Windows: download via curl (built into Windows 10/11)
+  // curl -L follows GitHub's 302→CDN redirect chain natively and is
+  // far more reliable than dart:io HttpClient in compiled Flutter apps.
   static Future<void> _windowsUpdate(
     String downloadUrl, {
     void Function(int received, int total)? onProgress,
   }) async {
     final savePath = '${Directory.systemTemp.path}\\InvoicePOS_Update.exe';
 
-    // Use dart:io HttpClient for reliable redirect handling on Windows
-    final client   = HttpClient();
-    client.autoUncompress = false;
-    var uri        = Uri.parse(downloadUrl);
-    int redirects  = 0;
+    // Delete any stale file from a previous failed attempt
+    final f = File(savePath);
+    if (f.existsSync()) f.deleteSync();
 
-    while (redirects < 10) {
-      final req  = await client.getUrl(uri);
-      req.headers.set('User-Agent', 'InvoicePOS-Updater/1.0');
-      final resp = await req.close();
+    final result = await Process.run(
+      'curl',
+      [
+        '-L',                  // follow redirects (GitHub → CDN)
+        '--silent',
+        '--show-error',
+        '--output', savePath,
+        '--retry', '3',
+        '--retry-delay', '2',
+        downloadUrl,
+      ],
+      runInShell: true,
+    );
 
-      if (resp.statusCode >= 300 && resp.statusCode < 400) {
-        final location = resp.headers.value('location');
-        if (location == null) throw Exception('Redirect with no location');
-        uri = uri.resolve(location);
-        redirects++;
-        continue;
-      }
-
-      if (resp.statusCode != 200) {
-        throw Exception('Download failed: HTTP ${resp.statusCode}');
-      }
-
-      final total = resp.contentLength;
-      var received = 0;
-      final file   = File(savePath).openWrite();
-      await for (final chunk in resp) {
-        file.add(chunk);
-        received += chunk.length;
-        onProgress?.call(received, total);
-      }
-      await file.flush();
-      await file.close();
-      break;
+    if (result.exitCode != 0) {
+      throw Exception('curl failed (${result.exitCode}): ${result.stderr}');
     }
-    client.close();
 
-    // Launch Inno Setup installer silently — it closes & replaces the running app
-    await Process.start(savePath,
-        ['/SILENT', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS'],
-        runInShell: false);
+    if (!File(savePath).existsSync()) {
+      throw Exception('Downloaded file not found after curl completed');
+    }
+
+    // Launch installer with UAC elevation via PowerShell 'runas' verb.
+    // /SILENT keeps the wizard hidden but still shows the progress bar.
+    // Without elevation, schtasks.exe fails with "Access denied" (error code 5).
+    await Process.run(
+      'powershell',
+      [
+        '-WindowStyle', 'Hidden',
+        '-Command',
+        'Start-Process -FilePath "$savePath" '
+            '-ArgumentList "/SILENT /CLOSEAPPLICATIONS /RESTARTAPPLICATIONS" '
+            '-Verb RunAs',
+      ],
+      runInShell: false,
+    );
     await Future.delayed(const Duration(seconds: 2));
     exit(0);
   }
