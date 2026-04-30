@@ -1,7 +1,7 @@
 name: invoice_pos
 description: Invoice & POS Billing Software for retail shops
 publish_to: 'none'
-version: 1.0.1+2
+version: 1.0.4+5
 
 environment:
   sdk: ^3.11.5
