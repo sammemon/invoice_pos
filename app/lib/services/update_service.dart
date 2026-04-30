@@ -7,7 +7,11 @@ import 'package:open_filex/open_filex.dart';
 import '../core/network/api_client.dart';
 
 class UpdateService {
-  static final _dio = Dio();
+  static final _dio = Dio(BaseOptions(
+    followRedirects: true,          // GitHub Releases 302→CDN
+    maxRedirects: 10,
+    validateStatus: (s) => s != null && s < 400,
+  ));
 
   static Future<Map<String, dynamic>> checkForUpdate() async {
     final info = await PackageInfo.fromPlatform();
@@ -34,31 +38,54 @@ class UpdateService {
     }
   }
 
-  // ── Windows: download + silent install ───────────────────────
+  // ── Windows: download via HttpClient (handles GitHub CDN redirects)
   static Future<void> _windowsUpdate(
     String downloadUrl, {
     void Function(int received, int total)? onProgress,
   }) async {
     final savePath = '${Directory.systemTemp.path}\\InvoicePOS_Update.exe';
 
-    await _dio.download(
-      downloadUrl,
-      savePath,
-      onReceiveProgress: onProgress,
-      options: Options(receiveTimeout: const Duration(minutes: 15)),
-    );
+    // Use dart:io HttpClient for reliable redirect handling on Windows
+    final client   = HttpClient();
+    client.autoUncompress = false;
+    var uri        = Uri.parse(downloadUrl);
+    int redirects  = 0;
 
-    // Run Inno Setup installer silently:
-    //  /SILENT             → no wizard pages, shows only progress bar
-    //  /CLOSEAPPLICATIONS  → automatically closes current running instance
-    //  /RESTARTAPPLICATIONS → re-launches app after update completes
-    await Process.start(
-      savePath,
-      ['/SILENT', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS'],
-      runInShell: false,
-    );
+    while (redirects < 10) {
+      final req  = await client.getUrl(uri);
+      req.headers.set('User-Agent', 'InvoicePOS-Updater/1.0');
+      final resp = await req.close();
 
-    // Give installer time to start, then exit so it can overwrite files
+      if (resp.statusCode >= 300 && resp.statusCode < 400) {
+        final location = resp.headers.value('location');
+        if (location == null) throw Exception('Redirect with no location');
+        uri = uri.resolve(location);
+        redirects++;
+        continue;
+      }
+
+      if (resp.statusCode != 200) {
+        throw Exception('Download failed: HTTP ${resp.statusCode}');
+      }
+
+      final total = resp.contentLength;
+      var received = 0;
+      final file   = File(savePath).openWrite();
+      await for (final chunk in resp) {
+        file.add(chunk);
+        received += chunk.length;
+        onProgress?.call(received, total);
+      }
+      await file.flush();
+      await file.close();
+      break;
+    }
+    client.close();
+
+    // Launch Inno Setup installer silently — it closes & replaces the running app
+    await Process.start(savePath,
+        ['/SILENT', '/CLOSEAPPLICATIONS', '/RESTARTAPPLICATIONS'],
+        runInShell: false);
     await Future.delayed(const Duration(seconds: 2));
     exit(0);
   }

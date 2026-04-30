@@ -3,10 +3,10 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import '../../providers/auth_provider.dart';
 import '../../providers/sync_provider.dart';
+import '../../providers/update_provider.dart';
 import '../../core/theme/app_theme.dart';
 import '../../core/constants/app_constants.dart';
 import '../../core/network/api_client.dart';
-import '../../services/update_service.dart';
 import '../../services/wifi_export_service.dart';
 
 class SettingsScreen extends ConsumerWidget {
@@ -94,7 +94,7 @@ class SettingsScreen extends ConsumerWidget {
           leading: const Icon(Icons.system_update_rounded),
           title: const Text('Check for Updates'),
           trailing: const Icon(Icons.chevron_right_rounded),
-          onTap: () => _checkUpdate(context),
+          onTap: () => _checkUpdate(context, ref),
         ),
         ListTile(
           leading: const Icon(Icons.info_outline_rounded),
@@ -307,33 +307,21 @@ class SettingsScreen extends ConsumerWidget {
   }
 
   // ── Update check ─────────────────────────────────────────
-  void _checkUpdate(BuildContext context) async {
+  // Uses the same updateProvider + root-navigator dialog as the auto-checker.
+  // This prevents the Settings black screen caused by the old plain showDialog.
+  void _checkUpdate(BuildContext context, WidgetRef ref) async {
+    ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Checking for updates...'), duration: Duration(seconds: 1)));
     try {
-      final result = await UpdateService.checkForUpdate();
+      await ref.read(updateProvider.notifier).checkForUpdate();
+      final state = ref.read(updateProvider);
       if (!context.mounted) return;
-      if (!result['hasUpdate']) {
+      if (!state.hasUpdate) {
         ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('You are on the latest version!')));
-      } else {
-        showDialog(
-          context: context,
-          builder: (_) => AlertDialog(
-            title: const Text('Update Available'),
-            content: Text(
-                'Version ${result['latestVersion']} is available.\n\n${result['releaseNotes'] ?? ''}'),
-            actions: [
-              TextButton(onPressed: () => Navigator.pop(context), child: const Text('Later')),
-              ElevatedButton(
-                onPressed: () {
-                  Navigator.pop(context);
-                  UpdateService.downloadAndInstall(result['downloadUrl']);
-                },
-                child: const Text('Update Now'),
-              ),
-            ],
-          ),
-        );
       }
+      // If update IS available, the UpdateChecker listener fires the
+      // root-navigator dialog automatically — no extra dialog needed here.
     } catch (e) {
       if (context.mounted) {
         ScaffoldMessenger.of(context)
