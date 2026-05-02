@@ -12,22 +12,37 @@ router.get('/check', async (req, res, next) => {
        ORDER BY created_at DESC LIMIT 1`,
       [platform]
     );
-    if (!rows[0]) return res.json({ success: true, hasUpdate: false });
-
-    const parseV = (v = '0.0.0') => v.split('.').map(Number);
+    const parseV = (v = '0.0.0') => v.split('+')[0].split('.').map(Number);
     const compare = (a, b) => {
       const pa = parseV(a), pb = parseV(b);
       for (let i = 0; i < 3; i++) { if (pa[i] > pb[i]) return 1; if (pa[i] < pb[i]) return -1; }
       return 0;
     };
 
-    const latest    = rows[0];
+    const envVersion = process.env.CURRENT_APP_VERSION;
+    const envDownloadUrl = platform === 'windows'
+      ? (process.env.WIN_DOWNLOAD_URL || process.env.WINDOWS_DOWNLOAD_URL)
+      : process.env.APK_DOWNLOAD_URL;
+    const envReleaseNotes = process.env.RELEASE_NOTES;
+
+    let latest = rows[0];
+    if (envVersion && (!latest || compare(envVersion, latest.version) > 0)) {
+      latest = {
+        version: envVersion,
+        download_url: envDownloadUrl,
+        release_notes: envReleaseNotes,
+        is_force_update: false,
+      };
+    }
+
+    if (!latest) return res.json({ success: true, hasUpdate: false });
+
     const hasUpdate = compare(latest.version, currentVersion) > 0;
     res.json({
       success: true, hasUpdate,
       isForceUpdate: latest.is_force_update && hasUpdate,
       latestVersion: latest.version,
-      downloadUrl: latest.download_url || process.env.APK_DOWNLOAD_URL,
+      downloadUrl: latest.download_url || envDownloadUrl,
       releaseNotes: latest.release_notes,
     });
   } catch (err) { next(err); }

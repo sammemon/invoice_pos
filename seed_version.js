@@ -1,9 +1,11 @@
 require('dotenv').config();
 const { query } = require('./src/config/database');
-const VER     = '1.0.5';
-const WIN_URL = 'https://github.com/sammemon/invoice_pos/releases/download/v1.0.5/InvoicePOS_Setup_v1.0.5.exe';
-const APK_URL = 'https://github.com/sammemon/invoice_pos/releases/download/v1.0.5/app-arm64-v8a-release.apk';
-const NOTES   = 'Installer elevation fixed (no more schtasks error), backend auto-starts from Startup folder';
+const VER     = process.env.CURRENT_APP_VERSION || '1.0.6';
+const WIN_URL = process.env.WIN_DOWNLOAD_URL || process.env.WINDOWS_DOWNLOAD_URL ||
+  'https://github.com/sammemon/invoice_pos/releases/download/v1.0.6/InvoicePOS_Setup_v1.0.6.exe';
+const APK_URL = process.env.APK_DOWNLOAD_URL ||
+  'https://github.com/sammemon/invoice_pos/releases/download/v1.0.6/app-arm64-v8a-release.apk';
+const NOTES   = process.env.RELEASE_NOTES || 'Bug fixes and updates of app';
 (async () => {
   await query('UPDATE app_versions SET is_active = false');
   await query('INSERT INTO app_versions (platform,version,download_url,release_notes,is_active) VALUES ($1,$2,$3,$4,true)', ['windows',VER,WIN_URL,NOTES]);
